@@ -6,22 +6,24 @@ Input: GT json files, Pred json files
 # coding: utf-8
 import multiprocessing
 import sys
-dataDir = '../../VQA'
+dataDir = '../../VQA-Evaluation'   #Change this according to the repository name
 sys.path.insert(0, '%s/PythonHelperTools/vqaTools' %(dataDir))
 from vqa import VQA
 from vqaEvaluation.vqaEval import VQAEval
 import os
 import time
 
+import numpy as np
+
 annFile = sys.argv[1]
 quesFile = sys.argv[2]
 resFile = sys.argv[3]
+choice = sys.argv[4]
+
 vqa = VQA(annFile, quesFile)
 vqaRes = vqa.loadRes(resFile, quesFile)
 vqaEval = VQAEval(vqa, vqaRes, n=2)
 all_qids = vqa.getQuesIds()
-
-
 
 def vqaeval(iter):
 	qid = all_qids[iter]
@@ -47,14 +49,39 @@ def reduce_acc(results_list):
 	print(binary_acc)
 	print(number_acc)
 	print(other_acc)
-	
+
+
+"""
+Slightly more optimized implementation of splitting stuff
+Saves ~2 seconds
+"""
+def vqaeval1(qid_list):
+	vqaEval.evaluate(qid_list.tolist())
+	return vqaEval.accuracy['overall']
+
+def reduce_acc1(results_list):
+	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
+	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
+	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
+"""
+End 
+"""
+
 if __name__ == "__main__":
 	t = time.time()
-	pool = multiprocessing.Pool(4)
-	results = pool.map(vqaeval, range(len(all_qids)))
-	reduce_acc(results)
+	pool = multiprocessing.Pool(12)
+
+	if choice == "1":
+		qids_splits = np.array_split(all_qids, 12)
+		results = pool.map(vqaeval1, qids_splits)
+		reduce_acc1(results)
+	elif choice == "2":
+		results = pool.map(vqaeval, range(len(all_qids)))
+		reduce_acc(results)
+	else:
+		results = vqaeval1(np.array(all_qids))
 	elapsed = time.time() - t
-	print elapsed
+	print "Elapsed Time: " + str(elapsed)
 	
 	
 

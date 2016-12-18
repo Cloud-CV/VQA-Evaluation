@@ -56,14 +56,15 @@ class VQAEval:
 							 'an',
 							 'the'
 							]
- 
-
 		self.periodStrip  = re.compile("(?!<=\d)(\.)(?!\d)")
-		self.commaStrip   = re.compile("(\d)(\,)(\d)")
-		self.punct        = [';', r"/", '[', ']', '"', '{', '}',
-							 '(', ')', '=', '+', '\\', '_', '-',
-							 '>', '<', '@', '`', ',', '?', '!']
+		self.commaStrip = re.compile("(?<=\d)(\,)+(?=\d)")
+		self.puncStrip = re.compile(r"(?<=[ \\;/\"`\[\](){}<>@=+_\-,?!])([\\;/\"`\[\](){}<>@=+_\-,?!])|([\\;/\"`\[\](){}<>@=+_\-,?!])(?=[ \\;/\"`\[\](){}<>@=+_\-,?!])")
+		self.puncStrip2 = re.compile(r"(?<=[a-zA-Z])([\\;/\"`\[\](){}<>@=+_\-,?!])(?=[a-zA-Z])")
+		self.spaceCleanup = re.compile(r"([ ]+)")
 
+		self.punct        = [';', r"/", '[', ']', '"', '{', '}',
+					 '(', ')', '=', '+', '\\', '_', '-',
+					 '>', '<', '@', '`', ',', '?', '!']
 	
 	def evaluate(self, quesIds=None):
 		if quesIds == None:
@@ -80,8 +81,8 @@ class VQAEval:
 		accQA       = []
 		accQuesType = {}
 		accAnsType  = {}
-		print "computing accuracy"
 		step = 0
+		
 		for quesId in quesIds:
 			resAns      = res[quesId]['answer']
 			resAns      = resAns.replace('\n', ' ')
@@ -117,20 +118,16 @@ class VQAEval:
 			step = step + 1
 
 		self.setAccuracy(accQA, accQuesType, accAnsType)
-		print "Done computing accuracy"
 	
 	def processPunctuation(self, inText):
-		outText = inText
-		for p in self.punct:
-			if (p + ' ' in inText or ' ' + p in inText) or (re.search(self.commaStrip, inText) != None):
-				outText = outText.replace(p, '')
-			else:
-				outText = outText.replace(p, ' ')	
-		outText = self.periodStrip.sub("",
-									  outText,
-									  re.UNICODE)
+		outText = self.commaStrip.sub("", inText)
+		outText = self.puncStrip.sub(" ", outText)
+		outText = self.spaceCleanup.sub(" ", outText)
+		outText = self.puncStrip2.sub(" ", outText)
+
+		outText = self.periodStrip.sub("", outText, re.UNICODE)
 		return outText
-	
+		
 	def processDigitArticle(self, inText):
 		outText = []
 		tempText = inText.lower().split()
@@ -179,7 +176,4 @@ class VQAEval:
 			progress = 1
 			status = "Done...\r\n"
 		block = int(round(barLength*progress))
-		text = "\rFinshed Percent: [{0}] {1}% {2}".format( "#"*block + "-"*(barLength-block), int(progress*100), status)
-		sys.stdout.write(text)
-		sys.stdout.flush()
 
