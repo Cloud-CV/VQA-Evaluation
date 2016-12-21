@@ -1,0 +1,6 @@
+TODO: Things left for VQA Evaluation Backend
+
+1. Get rid of subprocess calls
+2. Try to vectorize the whole array and see if that helps
+3. Retain RabbitMQ queues for evaluation on the backend
+4. Robust code; check for punctuations in Harsh's PRs
