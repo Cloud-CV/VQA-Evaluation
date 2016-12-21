@@ -1,5 +1,5 @@
 """
-TODO: Evaluate VQA in parallel for n-instances
+TODO: Try to remove the sub-process dependence
 Input: GT json files, Pred json files
 
 """
@@ -12,57 +12,42 @@ from vqa import VQA
 from vqaEvaluation.vqaEval import VQAEval
 import os
 import time
-
 import numpy as np
 
 annFile = sys.argv[1]
 quesFile = sys.argv[2]
 resFile = sys.argv[3]
-choice = sys.argv[4]
 
+## number of chunks for splitting the qid_list
+CHUNK_SZ = 16
 vqa = VQA(annFile, quesFile)
 vqaRes = vqa.loadRes(resFile, quesFile)
 vqaEval = VQAEval(vqa, vqaRes, n=2)
 all_qids = vqa.getQuesIds()
-
-def vqaeval(iter):
-	qid = all_qids[iter]
-	qid_list = []
-	qid_list.append(qid)
-	vqaEval.evaluate(qid_list)
-	qid_acc_dict = {qid:vqaEval.accuracy['overall']}
-	return qid_acc_dict
-
-def reduce_acc(results_list):
-	result_dict = reduce(lambda r, d: r.update(d) or r, results_list, {})
-	# Get question ids corresponding to 3 answer types - yes/no; Number; Others
-	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
-	number_qids = vqa.getQuesIds(ansTypes='number')
-	other_qids = vqa.getQuesIds(ansTypes='other')
-	
-	overall_acc = float(sum(result_dict[key] for key in all_qids)) / len(all_qids)
-	binary_acc = float(sum(result_dict[key] for key in binary_qids)) / len(binary_qids)
-	number_acc = float(sum(result_dict[key] for key in number_qids)) / len(number_qids)
-	other_acc = float(sum(result_dict[key] for key in other_qids)) / len(other_qids)
-	
-	print(overall_acc)
-	print(binary_acc)
-	print(number_acc)
-	print(other_acc)
-
+binary_qids = vqa.getQuesIds(ansTypes='yes/no')
+number_qids = vqa.getQuesIds(ansTypes='number')	
+other_qids = vqa.getQuesIds(ansTypes='other')
 
 """
 Slightly more optimized implementation of splitting stuff
 Saves ~2 seconds
+Flipped the process of computing question-type accuracies. Good Stuff, the chunking idea!
 """
-def vqaeval1(qid_list):
+def get_iter_arr(length_qids):
+	factor = int(length_qids/CHUNK_SZ)
+	remainder = length_qids % CHUNK_SZ
+	len_array = np.ones(CHUNK_SZ)
+	len_array = factor*len_array
+	if remainder != 0:
+		len_array[-1] = remainder
+	return len_array.tolist()
+
+def vqaeval(qid_list):
 	vqaEval.evaluate(qid_list.tolist())
 	return vqaEval.accuracy['overall']
 
-def reduce_acc1(results_list):
-	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
-	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
-	print "Overall Accuracy: ", float(sum(results_list)) / len(all_qids)
+def reduce_acc(results_list, length_list, length):
+	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
 """
 End 
 """
@@ -70,16 +55,32 @@ End
 if __name__ == "__main__":
 	t = time.time()
 	pool = multiprocessing.Pool(12)
+	
+	## Binary Accuracies
+	binary_qids_split = np.array_split(binary_qids, CHUNK_SZ)
+	binary_qids_len = get_iter_arr(len(binary_qids))
+	binary_results = pool.map(vqaeval, binary_qids_split)
+	binary_acc = reduce_acc(binary_results, binary_qids_len, len(binary_qids))
+	print(binary_acc)
 
-	if choice == "1":
-		qids_splits = np.array_split(all_qids, 12)
-		results = pool.map(vqaeval1, qids_splits)
-		reduce_acc1(results)
-	elif choice == "2":
-		results = pool.map(vqaeval, range(len(all_qids)))
-		reduce_acc(results)
-	else:
-		results = vqaeval1(np.array(all_qids))
+	## Number Accuracies
+	number_qids_split = np.array_split(number_qids, CHUNK_SZ)
+	number_qids_len = get_iter_arr(len(number_qids))
+	number_results = pool.map(vqaeval, number_qids_split)
+	number_acc = reduce_acc(number_results, number_qids_len, len(number_qids))
+	print(number_acc)
+
+	## Other Accuracies
+	other_qids_split = np.array_split(other_qids, CHUNK_SZ)
+	other_qids_len = get_iter_arr(len(other_qids))
+	other_results = pool.map(vqaeval, other_qids_split)
+	other_acc = reduce_acc(other_results, other_qids_len, len(other_qids))
+	print(other_acc)
+
+	## Overall Accuracy
+	overall_acc = float(float(other_acc*len(other_qids)) + float(number_acc*len(number_qids)) + float(binary_acc*len(binary_qids))) / len(all_qids)
+	print(overall_acc)
+
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
 	
