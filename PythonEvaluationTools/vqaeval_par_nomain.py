@@ -30,13 +30,12 @@ Saves ~2 seconds
 Flipped the process of computing question-type accuracies. Good Stuff, the chunking idea!
 """
 def get_iter_arr(length_qids):
-	factor = int(length_qids/CHUNK_SZ)
-	remainder = length_qids % CHUNK_SZ
-	len_array = np.ones(CHUNK_SZ)
-	len_array = factor*len_array
-	if remainder != 0:
-		len_array[-1] = remainder
-	return len_array.tolist()
+	one_array = np.ones(length_qids)
+	len_array = np.array_split(one_array, CHUNK_SZ)
+	for i in range(len(len_array)):
+		len_array[i] = np.sum(len_array[i])
+
+	return len_array
 
 def vqaeval(qid_list):
 	vqaEval.evaluate(qid_list.tolist())
@@ -48,8 +47,8 @@ def reduce_acc(results_list, length_list, length):
 End 
 """
 
-def Evaluate(annFile, quesFile, resFile, chunk_size):
-	prepare_objects(annFile, quesFile, resFile, chunk_size)
+def Evaluate(annFile, quesFile, resFile, chunk_sz):
+	prepare_objects(annFile, quesFile, resFile, chunk_sz)
 	all_qids = vqa.getQuesIds()
 	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
 	number_qids = vqa.getQuesIds(ansTypes='number')	
