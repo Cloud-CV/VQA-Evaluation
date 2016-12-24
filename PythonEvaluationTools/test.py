@@ -8,10 +8,11 @@ import vqaeval_par as eval_fun
 import sys 
 import unittest
 
-annFile = '../Data/VQA_jsons/mscoco_train2014_annotations.json'
-quesFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
-resFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_fake_results.json'
-
+base_dir = os.getcwd()
+base_dir = base_dir.rsplit('/',1)[0]
+annFile = base_dir + '/Data/VQA_jsons/mscoco_train2014_annotations.json'
+quesFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
+resFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_fake_results.json'
 
 class EvalTest(unittest.TestCase):
 
