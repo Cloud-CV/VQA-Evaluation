@@ -57,7 +57,7 @@ def Evaluate(annFile, quesFile, resFile, chunk_sz):
 
 	t = time.time()
 
-	pool = multiprocessing.Pool(16)
+	pool = multiprocessing.Pool(4)
 	
 	## Binary Accuracies
 	binary_qids_split = np.array_split(binary_qids, CHUNK_SZ)
