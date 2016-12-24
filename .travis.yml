@@ -16,9 +16,9 @@ install:
   - pip install -r requirements.txt
 
 script:
-  - cd $HOME/VQA-Evaluation/Data
+  - cd $HOME/Cloud-CV/VQA-Evaluation/Data
   - ./download_anno.sh
-  - cd $HOME/VQA-Evaluation/PythonEvaluationTools
+  - cd $HOME/Cloud-CV/VQA-Evaluation/PythonEvaluationTools
   - py.test test.py -v
 
 notifications:
