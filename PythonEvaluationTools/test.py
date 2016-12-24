@@ -52,9 +52,9 @@ class EvalTest(unittest.TestCase):
 		for i in range(CHUNK_SZ):
 			other_qids_num.append(len(other_qids_split[i]))
 
-		binary_qids_len = eval_fun.get_iter_arr(len(binary_qids))
-		number_qids_len = eval_fun.get_iter_arr(len(number_qids))
-		other_qids_len = eval_fun.get_iter_arr(len(other_qids))
+		binary_qids_len = eval_fun.get_iter_arr(binary_qids_split)
+		number_qids_len = eval_fun.get_iter_arr(number_qids_split)
+		other_qids_len = eval_fun.get_iter_arr(other_qids_split)
 
 		self.assertEqual(binary_qids_len, binary_qids_num)
 		self.assertEqual(number_qids_len, number_qids_num)
