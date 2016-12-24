@@ -2,6 +2,15 @@ language: python
 sudo: false
 python:
   - "2.7"
+
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+
+before_cache:
+  - rm -f $HOME/.cache/pip/log/debug.log
+
 # command to install dependencies
 install:
   - pip install -r requirements.txt
