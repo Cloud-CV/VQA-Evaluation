@@ -16,9 +16,9 @@ install:
   - pip install -r requirements.txt
 
 script:
-  - cd Data
+  - cd $HOME/Data
   - ./download_anno.sh
-  - cd PythonEvaluationTools
+  - cd $HOME/PythonEvaluationTools
   - py.test test.py -v
 
 notifications:
