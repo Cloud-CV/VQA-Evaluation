@@ -31,11 +31,10 @@ Slightly more optimized implementation of splitting stuff
 Saves ~2 seconds
 Flipped the process of computing question-type accuracies. Good Stuff, the chunking idea!
 """
-def get_iter_arr(length_qids):
-	one_array = np.ones(length_qids)
-	len_array = np.array_split(one_array, CHUNK_SZ)
-	for i in range(len(len_array)):
-		len_array[i] = np.sum(len_array[i])
+def get_iter_arr(qid_split):
+	len_array = []
+	for i in range(CHUNK_SZ):
+		len_array.append(len(qid_split[i]))
 	return len_array
 
 def vqaeval(qid_list):
@@ -44,6 +43,7 @@ def vqaeval(qid_list):
 
 def reduce_acc(results_list, length_list, length):
 	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
+
 """
 End 
 """
@@ -56,25 +56,26 @@ def Evaluate(annFile, quesFile, resFile, chunk_sz):
 	other_qids = vqa.getQuesIds(ansTypes='other')
 
 	t = time.time()
-	pool = multiprocessing.Pool(12)
+
+	pool = multiprocessing.Pool(16)
 	
 	## Binary Accuracies
 	binary_qids_split = np.array_split(binary_qids, CHUNK_SZ)
-	binary_qids_len = get_iter_arr(len(binary_qids))
+	binary_qids_len = get_iter_arr(binary_qids_split)
 	binary_results = pool.map(vqaeval, binary_qids_split)
 	binary_acc = reduce_acc(binary_results, binary_qids_len, len(binary_qids))
 	print(binary_acc)
 
 	## Number Accuracies
 	number_qids_split = np.array_split(number_qids, CHUNK_SZ)
-	number_qids_len = get_iter_arr(len(number_qids))
+	number_qids_len = get_iter_arr(number_qids_split)
 	number_results = pool.map(vqaeval, number_qids_split)
 	number_acc = reduce_acc(number_results, number_qids_len, len(number_qids))
 	print(number_acc)
 
 	## Other Accuracies
 	other_qids_split = np.array_split(other_qids, CHUNK_SZ)
-	other_qids_len = get_iter_arr(len(other_qids))
+	other_qids_len = get_iter_arr(other_qids_split)
 	other_results = pool.map(vqaeval, other_qids_split)
 	other_acc = reduce_acc(other_results, other_qids_len, len(other_qids))
 	print(other_acc)
