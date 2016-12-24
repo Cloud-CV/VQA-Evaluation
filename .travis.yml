@@ -17,6 +17,7 @@ install:
 
 script:
   - ./Data/download_anno.sh
+  - cd PythonEvaluationTools
   - py.test PythonEvaluationTools/test.py -v
 
 notifications:
