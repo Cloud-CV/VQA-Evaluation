@@ -16,7 +16,7 @@ vqa_dict = {}
 def callback(ch, method, properties, body):
 	print(" [x] Received %r" % body)
 	vqa_dict = yaml.safe_load(body)
-	ovacc, binacc, numacc, otheracc = eval_fun.Evaluate(vqa_dict['anno'], vqa_dict['ques'], vqa_dict['pred'], 1000)
+	ovacc, binacc, numacc, otheracc = eval_fun.Evaluate(vqa_dict['anno'], vqa_dict['ques'], vqa_dict['pred'], 1000, 2)
 
 channel.basic_consume(callback,queue='hello',no_ack=True)
 print(' [*] Waiting for messages. To exit press CTRL+C')

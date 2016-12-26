@@ -48,7 +48,7 @@ def reduce_acc(results_list, length_list, length):
 End 
 """
 
-def Evaluate(annFile, quesFile, resFile, chunk_sz):
+def Evaluate(annFile, quesFile, resFile, chunk_sz, N_CORES):
 	prepare_objects(annFile, quesFile, resFile, chunk_sz)
 	all_qids = vqa.getQuesIds()
 	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
@@ -57,7 +57,7 @@ def Evaluate(annFile, quesFile, resFile, chunk_sz):
 
 	t = time.time()
 
-	pool = multiprocessing.Pool(2)
+	pool = multiprocessing.Pool(N_CORES)
 	
 	## Binary Accuracies
 	binary_qids_split = np.array_split(binary_qids, CHUNK_SZ)
