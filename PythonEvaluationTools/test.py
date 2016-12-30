@@ -61,6 +61,48 @@ class EvalTest(unittest.TestCase):
 		self.assertEqual(number_qids_len, number_qids_num)
 		self.assertEqual(other_qids_len, other_qids_num)
 
+	def test_preprocess_text(self):
+		"""
+		Check question preprocessing in the evaluation API
+		"""
+		patterns = []
+		patterns.append(vqaEval.periodStrip.pattern)
+		patterns.append(vqaEval.commaStrip.pattern)
+		patterns.append(vqaEval.puncStrip.pattern)
+		patterns.append(vqaEval.puncStrip2.pattern)
+
+		pattern = "|".join(patterns)
+		print(pattern)
+
+		PatternString = ""
+		for x in xrange(1,5):
+			PatternString = PatternString + rstr.xeger(pattern)
+
+		print(PatternString)
+
+		stripPattern = ''
+		for i in PatternString:
+			if i.isdigit() or i.isalpha():
+				print(i)
+			else:
+				stripPattern = stripPattern + i
+
+		stripPattern = re.sub(r'\s+', '', stripPattern)
+		print(stripPattern)
+
+		# Create text for pre-processing
+		pre_text = "What " +  stripPattern + " is A an THE " + stripPattern + " none ONE " + stripPattern + " image?"
+		print(pre_text)
+		outText_1 = vqaEval.processPunctuation(pre_text)
+		outText_1 = re.sub(r'\s+', ' ', outText_1)
+		print(outText_1)
+		actText_1 = "What is A an THE none ONE image?"
+		print(actText_1)
+		self.assertEqual(outText_1, actText_1)
+
+		outText_2 = vqaEval.processDigitArticle(outText_1)
+		actText_2 = "what is 0 1 image?"
+		self.assertEqual(outText_2, actText_2)
 
 	def test_ques_accuracy(self):
 		"""
