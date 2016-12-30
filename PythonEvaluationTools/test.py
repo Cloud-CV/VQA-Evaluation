@@ -4,6 +4,8 @@ Write tests for vqa evaluation code
 import os 
 import time
 import numpy as np
+import re
+import rstr
 import vqaeval_par as eval_fun
 import sys 
 import unittest
