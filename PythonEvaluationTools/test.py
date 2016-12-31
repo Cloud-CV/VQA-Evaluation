@@ -12,9 +12,9 @@ import unittest
 
 base_dir = os.getcwd()
 base_dir = base_dir.rsplit('/',1)[0]
-annFile = base_dir + '/Data/VQA_jsons/mscoco_train2014_annotations.json'
-quesFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
-resFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_fake_results.json'
+annFile = base_dir + '/Data/VQA_jsons/mscoco_train2014_annotations_reduced.json'
+quesFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_questions_reduced.json'
+resFile = base_dir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_fake_results_reduced.json'
 
 class EvalTest(unittest.TestCase):
 
