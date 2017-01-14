@@ -10,6 +10,7 @@ resFile = sys.argv[1]
 
 vqa_dict = {}
 vqa_dict['anno'] = annFile
+vqa_dict['ques'] = quesFile
 vqa_dict['pred'] = resFile
 
 vqa_str = str(vqa_dict)
