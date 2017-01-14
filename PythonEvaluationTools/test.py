@@ -118,7 +118,7 @@ class EvalTest(unittest.TestCase):
 		reg_otheracc = vqaEval.accuracy['perAnswerType']['other']
 
 		# Parallel-processed accuracies
-		ovacc, binacc, numacc, otheracc = eval_fun.Evaluate(annFile, quesFile, resFile, CHUNK_SZ, 2)
+		ovacc, binacc, numacc, otheracc = eval_fun.Evaluate(annFile, resFile)
 
 		self.assertEqual(round(reg_ovacc, 2), round(ovacc, 2))
 		self.assertEqual(round(reg_binacc, 2), round(binacc, 2))

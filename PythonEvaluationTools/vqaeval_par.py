@@ -16,14 +16,13 @@ import numpy as np
 
 def prepare_objects(annFile, quesFile, resFile, chunk):
 	global CHUNK_SZ 
-	CHUNK_SZ = chunk
 	global vqa 
-	vqa = VQA(annFile, quesFile)
 	global vqaRes
-	vqaRes = vqa.loadRes(resFile, quesFile)
 	global vqaEval
+	CHUNK_SZ = chunk
+	vqa = VQA(annFile, quesFile)
+	vqaRes = vqa.loadRes(resFile, quesFile)
 	vqaEval = VQAEval(vqa, vqaRes, n=2)
-
 	return CHUNK_SZ, vqa, vqaEval
 	
 """
@@ -48,7 +47,10 @@ def reduce_acc(results_list, length_list, length):
 End 
 """
 
-def Evaluate(annFile, quesFile, resFile, chunk_sz, N_CORES):
+def Evaluate(annFile, resFile):
+	quesFile = dataDir + '/Data/VQA_jsons/OpenEnded_mscoco_train2014_questions_reduced.json'
+	chunk_sz = 16
+	N_CORES = 2
 	prepare_objects(annFile, quesFile, resFile, chunk_sz)
 	all_qids = vqa.getQuesIds()
 	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
