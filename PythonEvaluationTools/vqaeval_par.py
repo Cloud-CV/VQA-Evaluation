@@ -2,6 +2,8 @@
 """
 Input: GT JSON file, Pred JSON file, Phase-CodeName
 
+############################################################################
+Hardcoded path of a split-JSON file which has the following structure
 Split JSON File Structure - 
 {
 	split1 : [list of qids]
@@ -10,14 +12,13 @@ Split JSON File Structure -
 	split4 : [list of qids]
 } 
 
-Each phase has multiple splits associated with it. Write a global dict as,
+A global dict that has the information of the splits associated with each phase.
+Each phase has multiple splits associated with it. 
 	{
 		phase-1 : split1, split2, split3
 		phase-2 : split2, split4
 		phase-3 : split1, split4, split3
 	}
-
-A function to parse the json according to the phase-code name
 
 Ques-File is hardcoded
 Test on the train split.
@@ -53,6 +54,7 @@ phase_splits = {
 				}
 """
 
+# Test on some dummy splits of the VQA-train set
 phase_splits = {
 	'OpenEnded' : {
 					'train-dev2015' : ['split_1'],
@@ -72,18 +74,6 @@ questions = json.load(open(quesFile))
 task_type = 'OpenEnded'
 res = VQA()
 
-def prepare_questions(phase_codename, questions):
-	print('Preparing questions according to phase-codename')
-	split_keys = phase_splits[task_type][phase_codename]
-	phase_qids = []
-	for i in split_keys:
-		phase_qids += split_qids[i]
-	phase_qids = list(set(phase_qids))
-	for i in tqdm(range(len(questions['questions']))):
-		if questions['questions'][i]['question_id'] not in phase_qids:
-			questions['questions'].remove(questions['questions'][i])
-	return questions
-
 # Prepare all objects, variables and make them global
 def prepare_objects(annFile, resFile, phase_codename):
 	print('Preparing global objects..')
@@ -94,7 +84,6 @@ def prepare_objects(annFile, resFile, phase_codename):
 	global all_qids
 	global vqaRes
 	global vqaEval
-	# req_questions = prepare_questions(phase_codename, questions)
 	vqa = VQA(annFile, questions)
 	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
 	number_qids = vqa.getQuesIds(ansTypes='number')
@@ -122,6 +111,9 @@ def reduce_acc(results_list, length_list, length):
 	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
 
 def eval_split(type_qids):
+	"""
+	Function to evaluate a particular split associated with a phase 
+	"""
 	# Type qids is a dict with keys being the answer-types and the values being the list of qids
 	print('Evaluating split ..')
 	accuracy_dict = {}
@@ -144,11 +136,10 @@ def eval_split(type_qids):
 
 	return accuracy_dict
 
-"""
-Function to evaluate finally all the results
-"""
-
 def evaluate(annFile, resFile, phase_codename):
+	"""
+	Function to evaluate the phase submissions 
+	"""
 	global CHUNK_SZ
 	global N_CORES
 	CHUNK_SZ = 1000
@@ -156,10 +147,34 @@ def evaluate(annFile, resFile, phase_codename):
 	t = time.time()
 	prepare_objects(annFile, resFile, phase_codename)
 
-	# Prepare QID dict to evaluate each split per-phase
+	# Get all the split-keys corresponding to a given phase
 	split_keys = phase_splits[task_type][phase_codename]
 
-	# Final result
+	# Final accuracies as a dict with the following structure
+	"""
+	{
+               "result":[
+                  {
+                     "split_codename_1":{
+                        "key1":30,
+                        "key2":50,
+                     }
+                  },
+                  {
+                     "split_codename_2":{
+                        "key1":90,
+                        "key2":10,
+                     }
+                  },
+                  {
+                     "split_codename_3":{
+                        "key1":100,
+                        "key2":45,
+                     }
+                  }
+               ]
+            }
+	"""
 	result = { 'result' : []}
 	print('Evaluating phase..')
 	for i in split_keys:
@@ -175,6 +190,3 @@ def evaluate(annFile, resFile, phase_codename):
 	print "Elapsed Time: " + str(elapsed)
 	pprint(result)
 	return result
-
-if __name__ == '__main__':
-		main()	
