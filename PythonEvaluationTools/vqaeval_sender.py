@@ -2,16 +2,17 @@ import pika
 import sys
 
 # Add path to annotation File
-annFile = '../Data/VQA_jsons/mscoco_train2014_annotations.json'
+annFile = '../Data/VQA_jsons/train-challenge2015_train2014_anno.json'
 # Add path to question File
-quesFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
+# quesFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
 # Load path to resFile as argument
-resFile = sys.argv[1]
+resFile = '../Data/VQA_jsons/train-challenge2015_train2014_results.json'
 
 vqa_dict = {}
 vqa_dict['anno'] = annFile
-vqa_dict['ques'] = quesFile
+# vqa_dict['ques'] = quesFile
 vqa_dict['pred'] = resFile
+vqa_dict['phase_codename'] = 'train-challenge2015'
 
 vqa_str = str(vqa_dict)
 

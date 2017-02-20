@@ -1,6 +1,26 @@
 
 """
-Input: GT json files, Pred json files
+Input: GT JSON file, Pred JSON file, Phase-CodeName
+
+Split JSON File Structure - 
+{
+	split1 : [list of qids]
+	split2 : [list of qids]
+	split3 : [list of qids]
+	split4 : [list of qids]
+} 
+
+Each phase has multiple splits associated with it. Write a global dict as,
+	{
+		phase-1 : split1, split2, split3
+		phase-2 : split2, split4
+		phase-3 : split1, split4, split3
+	}
+
+A function to parse the json according to the phase-code name
+
+Ques-File is hardcoded
+Test on the train split.
 
 """
 # coding: utf-8
@@ -10,20 +30,78 @@ dataDir = '../../VQA-Evaluation'   #Change this according to the repository name
 sys.path.insert(0, '%s/PythonHelperTools/vqaTools' %(dataDir))
 from vqa import VQA
 from vqaEvaluation.vqaEval import VQAEval
+from contextlib import closing
+from pprint import pprint
+from tqdm import *
 import os
 import time
 import numpy as np
+import json
 
-def prepare_objects(annFile, quesFile, resFile, chunk):
-	global CHUNK_SZ 
-	global vqa 
+# phase-split association dict
+"""
+phase_splits = {
+	'OpenEnded' : {
+					'test-dev2015' : ['test-dev'],
+					'test2015' : ['test-dev', 'test-reserve', 'test-challenge', 'test-standard'],
+					'test-challenge2015' : ['test-dev', 'test-reserve', 'test-challenge', 'test-standard']
+					}
+	'MultipleChoice' : {
+						'test2015' : ['test-dev', 'test-reserve', 'test-challenge', 'test-standard'],
+						'test-challenge2015' : ['test-dev', 'test-reserve', 'test-challenge', 'test-standard']
+						}
+				}
+"""
+
+phase_splits = {
+	'OpenEnded' : {
+					'train-dev2015' : ['split_1'],
+					'train2015' : ['split_1', 'split_2', 'split_3', 'split_4'],
+					'train-challenge2015' : ['split_3', 'split_2', 'split_4']
+					}
+				}
+
+# Load the split-qids dict
+splitFile = '../Data/VQA_jsons/vqa_train2014_dummysplits.json'
+split_qids = json.load(open(splitFile))
+
+# Hard-code question file per-challenge
+quesFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
+questions = json.load(open(quesFile))
+
+task_type = 'OpenEnded'
+res = VQA()
+
+def prepare_questions(phase_codename, questions):
+	print('Preparing questions according to phase-codename')
+	split_keys = phase_splits[task_type][phase_codename]
+	phase_qids = []
+	for i in split_keys:
+		phase_qids += split_qids[i]
+	phase_qids = list(set(phase_qids))
+	for i in tqdm(range(len(questions['questions']))):
+		if questions['questions'][i]['question_id'] not in phase_qids:
+			questions['questions'].remove(questions['questions'][i])
+	return questions
+
+# Prepare all objects, variables and make them global
+def prepare_objects(annFile, resFile, phase_codename):
+	print('Preparing global objects..')
+	global vqa
+	global binary_qids
+	global number_qids
+	global other_qids
+	global all_qids
 	global vqaRes
 	global vqaEval
-	CHUNK_SZ = chunk
-	vqa = VQA(annFile, quesFile)
-	vqaRes = vqa.loadRes(resFile, quesFile)
-	vqaEval = VQAEval(vqa, vqaRes, n=2)
-	return CHUNK_SZ, vqa, vqaEval
+	# req_questions = prepare_questions(phase_codename, questions)
+	vqa = VQA(annFile, questions)
+	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
+	number_qids = vqa.getQuesIds(ansTypes='number')
+	other_qids = vqa.getQuesIds(ansTypes='other')
+	all_qids = vqa.getQuesIds()
+	vqaEval = VQAEval(all_qids, n=2)
+	vqaRes = vqa.loadRes(res, resFile)
 	
 """
 Slightly more optimized implementation of splitting stuff
@@ -37,55 +115,66 @@ def get_iter_arr(qid_split):
 	return len_array
 
 def vqaeval(qid_list):
-	vqaEval.evaluate(qid_list.tolist())
+	vqaEval.evaluate(vqa, vqaRes, qid_list.tolist())
 	return vqaEval.accuracy['overall']
 
 def reduce_acc(results_list, length_list, length):
 	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
 
+def eval_split(type_qids):
+	# Type qids is a dict with keys being the answer-types and the values being the list of qids
+	print('Evaluating split ..')
+	accuracy_dict = {}
+	acc = 0.0
+	length = 0
+	for key, val in type_qids.iteritems():
+		if len(val) == 0:
+			accuracy_dict[key] = 0.0
+		else:
+			qid_split = np.array_split(val, CHUNK_SZ)
+			qids_len = get_iter_arr(qid_split)
+			with closing(multiprocessing.Pool(N_CORES)) as p:
+				key_res = p.map(vqaeval, qid_split)
+			key_acc = reduce_acc(key_res, qids_len, len(val))
+			accuracy_dict[key] = key_acc
+			acc += float(key_acc*len(val))
+			length += len(val)
+
+	accuracy_dict['overall'] = float(acc)/float(length) 
+
+	return accuracy_dict
+
 """
-End 
+Function to evaluate finally all the results
 """
 
-def Evaluate(annFile, quesFile, resFile):
-	chunk_sz = 16
-	N_CORES = 2
-	prepare_objects(annFile, quesFile, resFile, chunk_sz)
-	all_qids = vqa.getQuesIds()
-	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
-	number_qids = vqa.getQuesIds(ansTypes='number')	
-	other_qids = vqa.getQuesIds(ansTypes='other')
-
+def evaluate(annFile, resFile, phase_codename):
+	global CHUNK_SZ
+	global N_CORES
+	CHUNK_SZ = 1000
+	N_CORES = 16
 	t = time.time()
+	prepare_objects(annFile, resFile, phase_codename)
 
-	pool = multiprocessing.Pool(N_CORES)
-	
-	## Binary Accuracies
-	binary_qids_split = np.array_split(binary_qids, CHUNK_SZ)
-	binary_qids_len = get_iter_arr(binary_qids_split)
-	binary_results = pool.map(vqaeval, binary_qids_split)
-	binary_acc = reduce_acc(binary_results, binary_qids_len, len(binary_qids))
-	print(binary_acc)
+	# Prepare QID dict to evaluate each split per-phase
+	split_keys = phase_splits[task_type][phase_codename]
 
-	## Number Accuracies
-	number_qids_split = np.array_split(number_qids, CHUNK_SZ)
-	number_qids_len = get_iter_arr(number_qids_split)
-	number_results = pool.map(vqaeval, number_qids_split)
-	number_acc = reduce_acc(number_results, number_qids_len, len(number_qids))
-	print(number_acc)
-
-	## Other Accuracies
-	other_qids_split = np.array_split(other_qids, CHUNK_SZ)
-	other_qids_len = get_iter_arr(other_qids_split)
-	other_results = pool.map(vqaeval, other_qids_split)
-	other_acc = reduce_acc(other_results, other_qids_len, len(other_qids))
-	print(other_acc)
-
-	## Overall Accuracy
-	overall_acc = float(float(other_acc*len(other_qids)) + float(number_acc*len(number_qids)) + float(binary_acc*len(binary_qids))) / len(all_qids)
-	print(overall_acc)
-
+	# Final result
+	result = { 'result' : []}
+	print('Evaluating phase..')
+	for i in split_keys:
+		type_qids = {}
+		res_dict = {}
+		type_qids['yes/no'] = list(set(split_qids[i]) & set(binary_qids))
+		type_qids['number'] = list(set(split_qids[i]) & set(number_qids))
+		type_qids['other'] = list(set(split_qids[i]) & set(other_qids))
+		res_dict[i] = eval_split(type_qids)
+		result['result'].append(res_dict)
 
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
-	return overall_acc, binary_acc, number_acc, other_acc	
+	pprint(result)
+	return result
+
+if __name__ == '__main__':
+		main()	
