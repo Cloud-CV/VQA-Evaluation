@@ -21,7 +21,7 @@ import datetime
 import copy
 
 class VQA:
-	def __init__(self, annotation_file=None, question_file=None):
+	def __init__(self, annotation_file=None, questions=None):
 		"""
        	Constructor of VQA helper class for reading and visualizing questions and answers.
         :param annotation_file (str): location of VQA annotation file
@@ -33,11 +33,11 @@ class VQA:
 		self.qa = {}
 		self.qqa = {}
 		self.imgToQA = {}
-		if not annotation_file == None and not question_file == None:
+		if not annotation_file == None and not questions == None:
 			print 'loading VQA annotations and questions into memory...'
 			time_t = datetime.datetime.utcnow()
 			dataset = json.load(open(annotation_file, 'r'))
-			questions = json.load(open(question_file, 'r'))
+			# questions = json.load(open(question_file, 'r'))
 			print datetime.datetime.utcnow() - time_t
 			self.dataset = dataset
 			self.questions = questions
@@ -142,14 +142,15 @@ class VQA:
 			for ans in ann['answers']:
 				print "Answer %d: %s" %(ans['answer_id'], ans['answer'])
 		
-	def loadRes(self, resFile, quesFile):
+	def loadRes(self, res, resFile):
 		"""
 		Load result file and return a result object.
 		:param   resFile (str)     : file name of result file
 		:return: res (obj)         : result api object
 		"""
-		res = VQA()
-		res.questions = json.load(open(quesFile))
+		# res = VQA()
+		# res.questions = json.load(open(quesFile))
+		res.questions = self.questions
 		res.dataset['info'] = copy.deepcopy(self.questions['info'])
 		res.dataset['task_type'] = copy.deepcopy(self.questions['task_type'])
 		res.dataset['data_type'] = copy.deepcopy(self.questions['data_type'])
