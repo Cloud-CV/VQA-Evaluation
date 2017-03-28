@@ -1,4 +1,3 @@
-
 """
 Input: GT JSON file, Pred JSON file, Phase-CodeName
 
@@ -23,6 +22,8 @@ Each phase has multiple splits associated with it.
 Ques-File is hardcoded
 Test on the train split.
 
+Metadata is stored separately under the field `metadata`
+
 """
 # coding: utf-8
 import multiprocessing
@@ -38,6 +39,7 @@ import os
 import time
 import numpy as np
 import json
+import copy
 
 # phase-split association dict
 """
@@ -71,6 +73,10 @@ split_qids = json.load(open(splitFile))
 quesFile = '../Data/VQA_jsons/OpenEnded_mscoco_train2014_questions.json'
 questions = json.load(open(quesFile))
 
+# Load ques-types file
+quesTypeFile = '../QuestionTypes/mscoco_question_types.txt'
+quesTypes = [x.strip('\n') for x in open(quesTypeFile, 'r').readlines()] 
+
 task_type = 'OpenEnded'
 res = VQA()
 
@@ -84,6 +90,7 @@ def prepare_objects(annFile, resFile, phase_codename):
 	global all_qids
 	global vqaRes
 	global vqaEval
+	global questype_qids
 	vqa = VQA(annFile, questions)
 	binary_qids = vqa.getQuesIds(ansTypes='yes/no')
 	number_qids = vqa.getQuesIds(ansTypes='number')
@@ -91,6 +98,9 @@ def prepare_objects(annFile, resFile, phase_codename):
 	all_qids = vqa.getQuesIds()
 	vqaEval = VQAEval(all_qids, n=2)
 	vqaRes = vqa.loadRes(res, resFile)
+	# Get per-Qtype qids
+	questype_qids = {x : vqa.getQuesIds(quesTypes=x) for x in quesTypes}
+
 	
 """
 Slightly more optimized implementation of splitting stuff
@@ -105,12 +115,24 @@ def get_iter_arr(qid_split):
 
 def vqaeval(qid_list):
 	vqaEval.evaluate(vqa, vqaRes, qid_list.tolist())
-	return vqaEval.accuracy['overall']
+	return vqaEval.accuracy
 
 def reduce_acc(results_list, length_list, length):
 	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
 
-def eval_split(type_qids):
+def reduce_questype(perQres, qtype_qids):
+	# reduce accuracies corresponding to different quesTypes
+	ques_type_dict = { x : { 'quesIds' : [], 'accuracy' : 0.0} for x in quesTypes}
+	for j in quesTypes:
+		ques_type_dict[j]['quesIds'] = list(set(list(perQres.keys())) & set(qtype_qids[j]))
+		if len(ques_type_dict[j]['quesIds']) != 0:
+			ques_type_dict[j]['accuracy'] = float(sum([perQres[x] for x in ques_type_dict[j]['quesIds']]) / float(len(ques_type_dict[j]['quesIds'])))
+		else:
+			ques_type_dict[j]['accuracy'] = 'N/A'
+
+	return ques_type_dict
+
+def eval_split(type_qids, qtype_qids):
 	"""
 	Function to evaluate a particular split associated with a phase 
 	"""
@@ -119,22 +141,29 @@ def eval_split(type_qids):
 	accuracy_dict = {}
 	acc = 0.0
 	length = 0
+	perQres = {}
+	qtype_list = []
 	for key, val in type_qids.iteritems():
 		if len(val) == 0:
-			accuracy_dict[key] = 0.0
+			accuracy_dict[key] = 'N/A'
 		else:
 			qid_split = np.array_split(val, CHUNK_SZ)
 			qids_len = get_iter_arr(qid_split)
 			with closing(multiprocessing.Pool(N_CORES)) as p:
 				key_res = p.map(vqaeval, qid_split)
-			key_acc = reduce_acc(key_res, qids_len, len(val))
+			# Get list of dicts for per question
+			per_ques = [x['perQuestion'] for x in key_res]
+			perQres.update({k: v for d in per_ques for k, v in d.items()})
+			overall_list = [x['overall'] for x in key_res]
+			key_acc = reduce_acc(overall_list, qids_len, len(val))
 			accuracy_dict[key] = key_acc
 			acc += float(key_acc*len(val))
 			length += len(val)
 
+	ques_type_dict = reduce_questype(perQres, qtype_qids)
 	accuracy_dict['overall'] = float(acc)/float(length) 
 
-	return accuracy_dict
+	return accuracy_dict, perQres, ques_type_dict
 
 def evaluate(annFile, resFile, phase_codename):
 	"""
@@ -175,18 +204,29 @@ def evaluate(annFile, resFile, phase_codename):
                ]
             }
 	"""
-	result = { 'result' : []}
+	result = {}
+	result['result'] = []
+	result['metadata'] = {x : {} for x in split_keys}
 	print('Evaluating phase..')
 	for i in split_keys:
+		# Add support for ques-Type accuracies
+		qtype_qids = {x : list(set(split_qids[i]) & set(questype_qids[x])) for x in quesTypes}
 		type_qids = {}
 		res_dict = {}
 		type_qids['yes/no'] = list(set(split_qids[i]) & set(binary_qids))
 		type_qids['number'] = list(set(split_qids[i]) & set(number_qids))
 		type_qids['other'] = list(set(split_qids[i]) & set(other_qids))
-		res_dict[i] = eval_split(type_qids)
+		acc_dict, per_ques, ques_type_acc = eval_split(type_qids, qtype_qids)
+		res_dict[i] = acc_dict
+		# Adding metadata 
+		result['metadata'][i]['perQ'] = per_ques
+		result['metadata'][i]['perQtype'] = ques_type_acc
 		result['result'].append(res_dict)
 
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
 	pprint(result)
+	with open(os.path.splitext(os.path.basename(annFile))[0].replace('anno', 'acc') + '.json', 'r') as f:
+		json.dump(result, f)
+
 	return result

@@ -6,6 +6,7 @@ __author__='aagrawal'
 # (https://github.com/tylin/coco-caption/blob/master/pycocoevalcap/eval.py).
 import sys
 import re
+import copy
 
 contractions = {"aint": "ain't", "arent": "aren't", "cant": "can't", "couldve": "could've", "couldnt": "couldn't", \
 					    "couldn'tve": "couldn't've", "couldnt've": "couldn't've", "didnt": "didn't", "doesnt": "doesn't", "dont": "don't", "hadnt": "hadn't", \
@@ -157,6 +158,8 @@ class VQAEval:
 		self.accuracy['overall']         = round(100*float(sum(accQA))/len(accQA), self.n)
 		self.accuracy['perQuestionType'] = {quesType: round(100*float(sum(accQuesType[quesType]))/len(accQuesType[quesType]), self.n) for quesType in accQuesType}
 		self.accuracy['perAnswerType']   = {ansType:  round(100*float(sum(accAnsType[ansType]))/len(accAnsType[ansType]), self.n) for ansType in accAnsType}
+		# Add line for per-Question
+		self.accuracy['perQuestion'] = copy.deepcopy(self.evalQA)
 			
 	def setEvalQA(self, quesId, acc):
 		self.evalQA[quesId] = round(100*acc, self.n)
