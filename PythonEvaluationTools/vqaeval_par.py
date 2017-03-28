@@ -218,7 +218,49 @@ def evaluate(annFile, resFile, phase_codename):
 		type_qids['other'] = list(set(split_qids[i]) & set(other_qids))
 		acc_dict, per_ques, ques_type_acc = eval_split(type_qids, qtype_qids)
 		res_dict[i] = acc_dict
-		# Adding metadata 
+		# Adding metadata in the format below
+		"""
+		{
+			"metadata" :
+							{ "split_codename_1" :	{
+														perQ : {
+	                                                        	qid1 : acc
+	                                                        	.
+	                                                        	.
+	                                                        	.
+																qidn : acc
+																}
+														perQtype : {
+																	qtype1 : acc
+																	qtype2 : acc
+																	.
+																	.
+																	.
+																	qtypen : acc		
+																	}
+	
+													}
+								"split_codename_2" :	{
+														perQ : {
+	                                                        	qid1 : acc
+	                                                        	.
+	                                                        	.
+	                                                        	.
+																qidn : acc
+																}
+														perQtype : {
+																	qtype1 : acc
+																	qtype2 : acc
+																	.
+																	.
+																	.
+																	qtypen : acc		
+																	}
+	
+													}
+							}
+		}
+		""" 
 		result['metadata'][i]['perQ'] = per_ques
 		result['metadata'][i]['perQtype'] = ques_type_acc
 		result['result'].append(res_dict)
