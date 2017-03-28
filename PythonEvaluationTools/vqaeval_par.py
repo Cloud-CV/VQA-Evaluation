@@ -268,7 +268,9 @@ def evaluate(annFile, resFile, phase_codename):
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
 	pprint(result)
-	with open(os.path.splitext(os.path.basename(annFile))[0].replace('anno', 'acc') + '.json', 'r') as f:
+
+	# Storing the results as a JSON for subsequent analysis (won't be in the final version; will be removed) 
+	with open(os.path.splitext(os.path.basename(annFile))[0].replace('anno', 'acc') + '.json', 'w') as f:
 		json.dump(result, f)
 
 	return result
