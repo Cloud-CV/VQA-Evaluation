@@ -264,6 +264,7 @@ def evaluate(annFile, resFile, phase_codename):
 		result['metadata'][i]['perQ'] = per_ques
 		result['metadata'][i]['perQtype'] = ques_type_acc
 		result['result'].append(res_dict)
+		result['metadata'][i]['quesIdperansType'] = type_qids
 
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
