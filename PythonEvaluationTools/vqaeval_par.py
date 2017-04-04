@@ -98,27 +98,16 @@ def prepare_objects(annFile, resFile, phase_codename):
 	all_qids = vqa.getQuesIds()
 	vqaEval = VQAEval(all_qids, n=2)
 	vqaRes = vqa.loadRes(res, resFile)
-	# Get per-Qtype qids
 	questype_qids = {x : vqa.getQuesIds(quesTypes=x) for x in quesTypes}
-
-	
+		
 """
 Slightly more optimized implementation of splitting stuff
 Saves ~2 seconds
 Flipped the process of computing question-type accuracies. Good Stuff, the chunking idea!
 """
-def get_iter_arr(qid_split):
-	len_array = []
-	for i in range(CHUNK_SZ):
-		len_array.append(len(qid_split[i]))
-	return len_array
-
 def vqaeval(qid_list):
 	vqaEval.evaluate(vqa, vqaRes, qid_list.tolist())
-	return vqaEval.accuracy
-
-def reduce_acc(results_list, length_list, length):
-	return float(sum([a*b for a,b in zip(results_list, length_list)])) / length
+	return (vqaEval.accuracy, float(vqaEval.accuracy['overall']*float(len(qid_list))))
 
 def reduce_questype(perQres, qtype_qids):
 	# reduce accuracies corresponding to different quesTypes
@@ -148,14 +137,12 @@ def eval_split(type_qids, qtype_qids):
 			accuracy_dict[key] = 'N/A'
 		else:
 			qid_split = np.array_split(val, CHUNK_SZ)
-			qids_len = get_iter_arr(qid_split)
 			with closing(multiprocessing.Pool(N_CORES)) as p:
 				key_res = p.map(vqaeval, qid_split)
-			# Get list of dicts for per question
-			per_ques = [x['perQuestion'] for x in key_res]
+			acc_list = [x[1] for x in key_res]
+			per_ques = [x[0]['perQuestion'] for x in key_res]
 			perQres.update({k: v for d in per_ques for k, v in d.items()})
-			overall_list = [x['overall'] for x in key_res]
-			key_acc = reduce_acc(overall_list, qids_len, len(val))
+			key_acc = float(np.sum(acc_list)/float(len(val)))
 			accuracy_dict[key] = key_acc
 			acc += float(key_acc*len(val))
 			length += len(val)
@@ -268,7 +255,7 @@ def evaluate(annFile, resFile, phase_codename):
 
 	elapsed = time.time() - t
 	print "Elapsed Time: " + str(elapsed)
-	pprint(result)
+	pprint(result['result'])
 
 	# Storing the results as a JSON for subsequent analysis (won't be in the final version; will be removed) 
 	with open(os.path.splitext(os.path.basename(annFile))[0].replace('anno', 'acc') + '.json', 'w') as f:
