@@ -52,11 +52,13 @@ periodStrip  = re.compile("(?!<=\d)(\.)(?!\d)")
 commaStrip = re.compile("(?<=\d)(\,)+(?=\d)")
 puncStrip = re.compile(r"(?<=[ \\;/\"`\[\](){}<>@=+_\-,?!])([\\;/\"`\[\](){}<>@=+_\-,?!])|([\\;/\"`\[\](){}<>@=+_\-,?!])(?=[ \\;/\"`\[\](){}<>@=+_\-,?!])")
 puncStrip2 = re.compile(r"(?<=[a-zA-Z])([\\;/\"`\[\](){}<>@=+_\-,?!])(?=[a-zA-Z])")
+puncStripBegin = re.compile(r"\A([ \\;/\"`\[\](){}<>@=+_\-,?!]+)(?=[a-zA-Z0-9 ])")
+puncStripEnd = re.compile(r"(?<=[a-zA-Z0-9 ])([ \\;/\"`\[\](){}<>@=+_\-,?!]+)\Z")
 spaceCleanup = re.compile(r"([ ]+)")
-
 punct        = [';', r"/", '[', ']', '"', '{', '}',
-			    '(', ')', '=', '+', '\\', '_', '-',
+				'(', ')', '=', '+', '\\', '_', '-',
 				'>', '<', '@', '`', ',', '?', '!']
+
 
 class VQAEval:
 	def __init__(self, quesIds, n=2):
@@ -131,12 +133,14 @@ class VQAEval:
 		self.setAccuracy(accQA, accQuesType, accAnsType)
 	
 	def processPunctuation(self, inText):
-		outText = commaStrip.sub("", inText)
-		outText = puncStrip.sub(" ", outText)
-		outText = spaceCleanup.sub(" ", outText)
-		outText = puncStrip2.sub(" ", outText)
-
-		outText = periodStrip.sub("", outText, re.UNICODE)
+		outText = self.puncStripBegin.sub("", inText)
+		outText = self.puncStripEnd.sub("", outText)
+		outText = self.commaStrip.sub("", outText)
+		outText = self.puncStrip.sub(" ", outText)
+		outText = self.spaceCleanup.sub(" ", outText)
+		outText = self.puncStrip2.sub(" ", outText)
+		outText = self.puncStrip2.sub("", outText)
+		outText = self.periodStrip.sub("", outText, re.UNICODE)
 		return outText
 		
 	def processDigitArticle(self, inText):
