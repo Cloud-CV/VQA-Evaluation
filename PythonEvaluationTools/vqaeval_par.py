@@ -65,6 +65,16 @@ phase_splits = {
 					}
 				}
 
+# Add phase-split privacy feature
+# True if visible in stdout; else False
+phase_split_privacy = {
+	'OpenEnded' : {
+					'train-dev2015' : {'split_1' : True},
+					'train2015' : {'split_1' : True, 'split_2' : False, 'split_3' : False, 'split_4' : True},
+					'train-challenge2015' : {'split_3' : False, 'split_2' : False, 'split_4' : True}
+					}
+				}
+
 # Load the split-qids dict
 splitFile = '../Data/VQA_jsons/vqa_train2014_dummysplits.json'
 split_qids = json.load(open(splitFile))
@@ -159,7 +169,7 @@ def evaluate(annFile, resFile, phase_codename):
 	global CHUNK_SZ
 	global N_CORES
 	CHUNK_SZ = 1000
-	N_CORES = 16
+	N_CORES = 2
 	t = time.time()
 	prepare_objects(annFile, resFile, phase_codename)
 
@@ -254,8 +264,11 @@ def evaluate(annFile, resFile, phase_codename):
 		result['metadata'][i]['quesIdperansType'] = type_qids
 
 	elapsed = time.time() - t
-	print "Elapsed Time: " + str(elapsed)
-	pprint(result['result'])
+	print("Elapsed Time: " + str(elapsed))
+	for val in result['result']:
+		key = list(val.keys())[0]
+		if phase_split_privacy[task_type][phase_codename][key]:
+			pprint(val)
 
 	# Storing the results as a JSON for subsequent analysis (won't be in the final version; will be removed) 
 	with open(os.path.splitext(os.path.basename(annFile))[0].replace('anno', 'acc') + '.json', 'w') as f:
