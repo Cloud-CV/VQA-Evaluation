@@ -260,6 +260,7 @@ def evaluate(annFile, resFile, phase_codename):
 		""" 
 		result['metadata'][i]['perQ'] = per_ques
 		result['metadata'][i]['perQtype'] = ques_type_acc
+		result['metadata'][i]['perAtype'] = res_dict
 		result['result'].append(res_dict)
 		result['metadata'][i]['quesIdperansType'] = type_qids
 
